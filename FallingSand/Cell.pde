@@ -2,7 +2,7 @@ class Cell {
   int xPos;
   int yPos;
   String type = "";
-  String nextType = "";
+  int updated;
   color currColor = color(0);
   int borders;
 
@@ -19,9 +19,16 @@ class Cell {
       currColor = color(255, 180, 0);
     } else if (type == "water") {
       currColor = color(0, 0, 255);
-    }else {
+    } else if (type == "fire") {
+      currColor = color(255, 0, 0);
+    } else if (type == "nitro") {
+      currColor = color(0, 160, 0);
+    }  else if (type == "lava") {
+      currColor = color(255, 160, 0);
+    } else {
       currColor = color(0);
     }
+    updated = 0;
   }
 
   boolean getMouseGridspace(float f) {
@@ -32,94 +39,296 @@ class Cell {
   }
 
   void update(Grid grid) {
-    if (getMouseGridspace(10) && keyPressed && key == 's') {
-      nextType = "sand";
-    } else if (getMouseGridspace(10) && keyPressed && key == 'p') {
-      nextType = "powder";
-    }  else if (getMouseGridspace(10) && keyPressed && key == 'w') {
-      nextType = "water";
+    if (getMouseGridspace(15) && keyPressed && key == 's') {
+      type = "sand";
+    } else if (getMouseGridspace(15) && keyPressed && key == 'p') {
+      type = "powder";
+    } else if (getMouseGridspace(15) && keyPressed && key == 'w') {
+      type = "water";
+    } else if (getMouseGridspace(15) && keyPressed && key == 'f') {
+      type = "fire";
+    } else if (getMouseGridspace(15) && keyPressed && key == 'n') {
+      type = "nitro";
+    }  else if (getMouseGridspace(15) && keyPressed && key == 'l') {
+      type = "lava";
+    } else if (getMouseGridspace(15) && keyPressed && key == 'e') {
+      type = "";
     }
+    Cell[][] neighbors = new Cell[3][3];
+    for (int i = -1; i < 2; i++) {
+      for (int j = -1; j < 2; j++) {
+        neighbors[i + 1][j + 1] = grid.getCell(xPos + i, yPos + j);
+      }
+    }
+
     if (type == "sand") {
-      if (grid.getCell(xPos, yPos + 1) != null) {
-        if (grid.getCell(xPos, yPos + 1).type == "") {
-          nextType = "";
-          grid.getCell(xPos, yPos + 1).nextType = "sand";
-        }
-      }
-    } else if (type == "powder") {
-      boolean b = false;
-      boolean bl = false;
-      boolean br = false;
-      if (grid.getCell(xPos, yPos + 1) != null) {
-        if (grid.getCell(xPos, yPos + 1).type == "") {
-          b = true;
-        }
-      }
-      if (grid.getCell(xPos + 1, yPos + 1) != null) {
-        if (grid.getCell(xPos + 1, yPos + 1).type == "") {
-          br = true;
-        }
-      }
-      if (grid.getCell(xPos - 1, yPos + 1) != null) {
-        if (grid.getCell(xPos - 1, yPos + 1).type == "") {
-          bl = true;
-        }
-      }
-      if (b) {
-        nextType = "";
-        grid.getCell(xPos, yPos + 1).nextType = "powder";
-      } else if (bl && br) {
-        if (random(1) < 0.5) {
-          nextType = "";
-          grid.getCell(xPos + 1, yPos + 1).nextType = "powder";
-        } else {
-          nextType = "";
-          grid.getCell(xPos - 1, yPos + 1).nextType = "powder";
-        }
-      } else if (bl) {
-        nextType = "";
-        grid.getCell(xPos - 1, yPos + 1).nextType = "powder";
-      } else if (br) {
-        nextType = "";
-        grid.getCell(xPos + 1, yPos + 1).nextType = "powder";
-      } 
-    }  else if (type == "water") {
-      boolean b = false;
-      boolean bl = false;
-      boolean br = false;
-      if (grid.getCell(xPos, yPos + 1) != null) {
-        if (grid.getCell(xPos, yPos + 1).type == "") {
-          b = true;
-        }
-      }
-      if (grid.getCell(xPos + 1, yPos) != null) {
-        if (grid.getCell(xPos + 1, yPos).type == "") {
-          br = true;
-        }
-      }
-      if (grid.getCell(xPos - 1, yPos) != null) {
-        if (grid.getCell(xPos - 1, yPos).type == "") {
-          bl = true;
-        }
-      }
-      if (b) {
-        nextType = "";
-        grid.getCell(xPos, yPos + 1).nextType = "water";
-      } else if (bl && br) {
-        if (random(1) < 0.5) {
-          nextType = "";
-          grid.getCell(xPos + 1, yPos).nextType = "water";
-        } else {
-          nextType = "";
-          grid.getCell(xPos - 1, yPos).nextType = "water";
-        }
-      } else if (bl) {
-        nextType = "";
-        grid.getCell(xPos - 1, yPos).nextType = "water";
-      } else if (br) {
-        nextType = "";
-        grid.getCell(xPos + 1, yPos).nextType = "water";
-      } 
+      sandUpdate(grid, neighbors);
+    } 
+    if (type == "water") {
+      waterUpdate(grid, neighbors);
     }
+    if (type == "powder") {
+      powderUpdate(grid, neighbors);
+    }
+    if (type == "fire") {
+      fireUpdate(grid, neighbors);
+    }
+    if (type == "nitro") {
+      nitroUpdate(grid, neighbors);
+    }
+  }
+
+  void sandUpdate(Grid grid, Cell[][] cels) {
+    Cell target = null;
+    while (true) {
+      if (cels[1][2] != null) {
+        if (fallable(cels[1][2]) && updated <= cels[1][2].updated) {
+          target = cels[1][2];
+          break;
+        }
+      }
+      break;
+    }
+    if (target != null) {
+      String temp = type;
+      type = target.type;
+      target.type = temp;
+      grid.getCell(xPos, yPos + 1).type = temp;
+      updated++;
+      target.updated++;
+    }
+  }
+
+
+
+  void powderUpdate(Grid grid, Cell[][] cels) {
+    Cell target = null;
+    ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
+    while (true) {
+      if (fallable(cels[0][2]) || fallable(cels[1][2]) || fallable(cels[2][2])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][2]) && updated <= cels[i][2].updated) {
+            potentialTargets.add(cels[i][2]);
+          }
+        }
+        if (potentialTargets.size() > 0) {
+          target = pickRandom(potentialTargets);
+        }
+        break;
+      }
+      break;
+    }
+    if (target != null) {
+      String temp = type;
+      type = target.type;
+      target.type = temp;
+      for (Cell c : potentialTargets) {
+        c.updated++;
+      }
+    }
+  }
+
+  void waterUpdate(Grid grid, Cell[][] cels) {
+    Cell target = null;
+    ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
+    while (true) {
+      if (fallable(cels[0][2]) || fallable(cels[1][2]) || fallable(cels[2][2])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][2]) && updated <= cels[i][2].updated + 1) {
+            potentialTargets.add(cels[i][2]);
+          }
+        }
+        //if (potentialTargets.size() > 0) {
+        //  target = pickRandom(potentialTargets);
+        //}
+        //break;
+      } 
+      if (fallable(cels[0][1]) || fallable(cels[2][1])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][1]) && updated <= cels[i][1].updated && i != 1) {
+            potentialTargets.add(cels[i][1]);
+          }
+        }
+        if (potentialTargets.size() > 0) {
+          target = pickRandom(potentialTargets);
+        }
+        break;
+      }
+      break;
+    }
+    if (target != null) {
+      String temp = type;
+      type = target.type;
+      target.type = temp;
+      for (Cell c : potentialTargets) {
+        c.updated++;
+      }
+    }
+  }
+  
+   void lavaUpdate(Grid grid, Cell[][] cels) {
+    Cell target = null;
+    ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
+    while (true) {
+      if (fallable(cels[0][2]) || fallable(cels[1][2]) || fallable(cels[2][2])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][2]) && updated <= cels[i][2].updated + 1) {
+            potentialTargets.add(cels[i][2]);
+          }
+        }
+        //if (potentialTargets.size() > 0) {
+        //  target = pickRandom(potentialTargets);
+        //}
+        //break;
+      } 
+      if (fallable(cels[0][1]) || fallable(cels[2][1])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][1]) && updated <= cels[i][1].updated && i != 1) {
+            potentialTargets.add(cels[i][1]);
+          }
+        }
+        if (potentialTargets.size() > 0) {
+          target = pickRandom(potentialTargets);
+        }
+        break;
+      }
+      break;
+    }
+    if (target != null) {
+      String temp = type;
+      type = target.type;
+      target.type = temp;
+      for (Cell c : potentialTargets) {
+        c.updated++;
+      }
+    }
+  }
+  
+  void nitroUpdate(Grid grid, Cell[][] cels) {
+    Cell target = null;
+    ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
+    while (true) {
+      if (fallable(cels[0][2]) || fallable(cels[1][2]) || fallable(cels[2][2])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][2]) && updated <= cels[i][2].updated) {
+            potentialTargets.add(cels[i][2]);
+          }
+        }
+        //if (potentialTargets.size() > 0) {
+        //  target = pickRandom(potentialTargets);
+        //}
+        //break;
+      } 
+      if (fallable(cels[0][1]) || fallable(cels[2][1])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][1]) && updated <= cels[i][1].updated && i != 1) {
+            potentialTargets.add(cels[i][1]);
+          }
+        }
+        if (potentialTargets.size() > 0) {
+          target = pickRandom(potentialTargets);
+        }
+        break;
+      }
+      break;
+    }
+    if (target != null) {
+      String temp = type;
+      type = target.type;
+      target.type = temp;
+      for (Cell c : potentialTargets) {
+        c.updated++;
+      }
+    }
+  }
+
+  void fireUpdate(Grid grid, Cell[][] cels) {
+    Cell target = null;
+    ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
+    while (true) {
+      if (!fallable(cels[1][0])) {
+        type = "";
+        return;
+      }
+      fallable(cels[0][2]);
+      fallable(cels[1][2]);
+      fallable(cels[2][2]);
+      if (fallable(cels[0][0]) || fallable(cels[1][0]) || fallable(cels[2][0])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][0]) && updated <= cels[i][0].updated) {
+            potentialTargets.add(cels[i][0]);
+          }
+        }
+        //if (potentialTargets.size() > 0) {
+        //  target = pickRandom(potentialTargets);
+        //}
+        //break;
+      }
+      if (fallable(cels[0][1]) || fallable(cels[2][1])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][1]) && updated <= cels[i][1].updated && i != 1) {
+            potentialTargets.add(cels[i][1]);
+          }
+        }
+        if (potentialTargets.size() > 0) {
+          target = pickRandom(potentialTargets);
+        }
+        break;
+      }
+      break;
+    }
+    if (target != null) {
+      String temp = type;
+      type = target.type;
+      target.type = temp;
+      for (Cell c : potentialTargets) {
+        c.updated++;
+      }
+    }
+  }
+
+  boolean fallable(Cell c) {
+    ArrayList<String> fallable = new ArrayList<String>();
+    if (type.equals("sand")) {
+      fallable.add("");
+      fallable.add("water");
+    }
+    if (type.equals("water")) {
+      fallable.add("");
+      fallable.add("fire");
+    }
+    if (type.equals("powder")) {
+      fallable.add("");
+      fallable.add("water");
+    }
+    if (type.equals("nitro")) {
+      fallable.add("");
+      fallable.add("water");
+    }
+    if (type.equals("fire")) {
+      fallable.add("");
+      if (c != null)
+        if ((c.type.equals("powder") || c.type.equals("sand") || c.type.equals("nitro")) && updated <= c.updated) {
+          c.type = "fire";
+          c.updated++;
+          return true;
+        } else if (c.type.equals("water")){
+          type = "";
+          return false;
+        }
+    }
+    if (c != null) {
+      String s = c.type;
+      for (String st : fallable) {
+        if (st.equals(s)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  Cell pickRandom (ArrayList<Cell> c) {
+    return c.get((int)random(c.size()));
   }
 }
