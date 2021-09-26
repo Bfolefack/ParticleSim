@@ -23,8 +23,10 @@ class Cell {
       currColor = color(255, 0, 0);
     } else if (type == "nitro") {
       currColor = color(0, 160, 0);
-    }  else if (type == "lava") {
+    } else if (type == "lava") {
       currColor = color(255, 160, 0);
+    } else if (type == "rock") {
+      currColor = color(200, 200, 200);
     } else {
       currColor = color(0);
     }
@@ -49,8 +51,10 @@ class Cell {
       type = "fire";
     } else if (getMouseGridspace(15) && keyPressed && key == 'n') {
       type = "nitro";
-    }  else if (getMouseGridspace(15) && keyPressed && key == 'l') {
+    } else if (getMouseGridspace(15) && keyPressed && key == 'l') {
       type = "lava";
+    } else if (getMouseGridspace(15) && keyPressed && key == 'r') {
+      type = "rock";
     } else if (getMouseGridspace(15) && keyPressed && key == 'e') {
       type = "";
     }
@@ -75,6 +79,12 @@ class Cell {
     }
     if (type == "nitro") {
       nitroUpdate(grid, neighbors);
+    }
+    if (type == "lava") {
+      lavaUpdate(grid, neighbors);
+    }
+    if (type == "rock") {
+      lavaUpdate(grid, neighbors);
     }
   }
 
@@ -128,6 +138,34 @@ class Cell {
     }
   }
 
+  void rockUpdate(Grid grid, Cell[][] cels) {
+    Cell target = null;
+    ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
+    while (true) {
+      if (fallable(cels[0][2]) || fallable(cels[1][2]) || fallable(cels[2][2])) {
+        for (int i = 0; i < 3; i++) {
+          if (fallable(cels[i][2]) && updated <= cels[i][2].updated) {
+            potentialTargets.add(cels[i][2]);
+          }
+        }
+        if (potentialTargets.size() > 0) {
+          target = pickRandom(potentialTargets);
+        }
+        break;
+      }
+      break;
+    }
+    if (target != null) {
+      String temp = type;
+      type = target.type;
+      target.type = temp;
+      for (Cell c : potentialTargets) {
+        c.updated++;
+      }
+    }
+  }
+
+
   void waterUpdate(Grid grid, Cell[][] cels) {
     Cell target = null;
     ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
@@ -165,8 +203,8 @@ class Cell {
       }
     }
   }
-  
-   void lavaUpdate(Grid grid, Cell[][] cels) {
+
+  void lavaUpdate(Grid grid, Cell[][] cels) {
     Cell target = null;
     ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
     while (true) {
@@ -203,7 +241,7 @@ class Cell {
       }
     }
   }
-  
+
   void nitroUpdate(Grid grid, Cell[][] cels) {
     Cell target = null;
     ArrayList<Cell> potentialTargets = new ArrayList<Cell>();
@@ -291,6 +329,7 @@ class Cell {
     ArrayList<String> fallable = new ArrayList<String>();
     if (type.equals("sand")) {
       fallable.add("");
+      fallable.add("fire");
       fallable.add("water");
     }
     if (type.equals("water")) {
@@ -299,22 +338,43 @@ class Cell {
     }
     if (type.equals("powder")) {
       fallable.add("");
+      fallable.add("fire");
       fallable.add("water");
     }
     if (type.equals("nitro")) {
       fallable.add("");
       fallable.add("water");
+      fallable.add("fire");
     }
     if (type.equals("fire")) {
       fallable.add("");
+      ignite(c);
+    }
+    if (type.equals("lava")) {
+      fallable.add("");
+      fallable.add("sand");
+      fallable.add("powder");
+      fallable.add("nitro");
+      fallable.add("water");
+      fallable.add("fire");
+      ignite(c);
       if (c != null)
-        if ((c.type.equals("powder") || c.type.equals("sand") || c.type.equals("nitro")) && updated <= c.updated) {
-          c.type = "fire";
-          c.updated++;
-          return true;
-        } else if (c.type.equals("water")){
-          type = "";
-          return false;
+        if (c.type == "water") {
+          type = "rock";
+          c.type = "rock";
+        }
+    } 
+    if (type.equals("rock")) {
+      fallable.add("");
+      fallable.add("sand");
+      fallable.add("powder");
+      fallable.add("nitro");
+      fallable.add("water");
+      fallable.add("fire");
+      if (c != null)
+        if (c.type == "lava") {
+          if (random(1) < 0.02)
+            type = "lava";
         }
     }
     if (c != null) {
@@ -326,6 +386,15 @@ class Cell {
       }
     }
     return false;
+  }
+
+
+  void ignite(Cell c) {
+    if (c != null)
+      if ((c.type.equals("powder") || c.type.equals("sand") || c.type.equals("nitro")) && updated <= c.updated) {
+        c.type = "fire";
+        c.updated++;
+      }
   }
 
   Cell pickRandom (ArrayList<Cell> c) {
